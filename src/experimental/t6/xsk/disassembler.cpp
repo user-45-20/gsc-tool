@@ -81,6 +81,8 @@ void disassembler::disassemble_strings()
     {
         std::uint16_t pos = script_->pos();
         string_refs_.insert({pos, script_->read_c_string() });
+
+        // std::cout << pos << " " << string_refs_.at(pos) << "\n";
     }
 }
 
@@ -139,9 +141,10 @@ void disassembler::disassemble_stringtable()
     for(auto i = 0; i < header_.stringtablefixup_count; i++)
     {
         arc::asm_string str;
-        str.name = string_refs_.at(script_->read<std::uint16_t>());
+        str.id = script_->read<std::uint16_t>();
+        str.name = string_refs_.at(str.id);
         auto ref_count = script_->read<std::uint8_t>();
-        script_->seek(1);
+        script_->seek(1); // skip string type
 
         for(auto j = 0; j < ref_count; j++)
         {
@@ -150,12 +153,12 @@ void disassembler::disassemble_stringtable()
 
         stringtable_.push_back(str);
     }
-/*
+
     std::cout << "\nSTRINGTABLE: \n";
 
     for(auto entry : stringtable_)
     {
-        std::cout << "    " << entry.name << "\n";
+        std::cout << utils::string::va("    [%X] %s\n", entry.id, entry.name.c_str());
         std::cout << "        refs:";
         
         for(auto ref : entry.refs)
@@ -165,7 +168,7 @@ void disassembler::disassemble_stringtable()
 
         std::cout << "\n";
     }
-*/
+
 }
 
 void disassembler::disassemble_imports()
@@ -180,7 +183,10 @@ void disassembler::disassemble_imports()
         entry->space = string_refs_.at(num);
         auto ref_count = script_->read<std::uint16_t>();
         entry->params = script_->read<std::uint8_t>();
-        script_->seek(1);
+        // script_->seek(1);  // ignore flags
+        auto flags = script_->read<uint8_t>();
+
+        std::cout << "import: " << entry->name << " | " << entry->space << " | " << (int)entry->params << " " << std::hex << (int)flags << std::dec << "\n";
 
         for(auto j = 0; j < ref_count; j++)
         {
@@ -206,6 +212,8 @@ void disassembler::disassemble_exports()
         entry.space = "";
         entry.params = script_->read<std::uint8_t>();
         entry.flags = script_->read<std::uint8_t>();
+
+        // std::cout << "Export " << entry.name << " checksum " << entry.checksum << "\n";
 
         exports_.push_back(entry);
     }
@@ -458,6 +466,8 @@ void disassembler::disassemble_instruction(const arc::asm_instruction_ptr& inst)
     case opcode::OP_ScriptThreadCall:
     case opcode::OP_ScriptMethodThreadCall:
         {
+            // one byte left in the bytecode for outparamcount, builtins only
+            // filled out in GscObjResolve
             script_->seek(1);
             inst->size += script_->align(4);
             inst->data.push_back(string_refs_.at(script_->read<std::uint32_t>()));

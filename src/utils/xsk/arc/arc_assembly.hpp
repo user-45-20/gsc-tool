@@ -60,6 +60,8 @@ using asm_animtree_ptr = std::shared_ptr<asm_animtree>;
 
 struct asm_string
 {
+    std::uint16_t id;
+    // looked up from ID
     std::string name;
     std::vector<std::uint32_t> refs;
 };

@@ -383,6 +383,26 @@ void disassemble_file(arc::disassembler& disassembler, std::string file)
     }
 }
 
+
+void compile_file(gsc::assembler& assembler, gsc::compiler& compiler, std::string file)
+{
+    const auto ext = std::string(".gsc");
+    const auto extpos = file.find(ext);
+
+    if (extpos != std::string::npos)
+    {
+        file.replace(extpos, ext.length(), "");
+    }
+
+    auto data = utils::file::read(file + ext);
+    compiler.set_readf_callback(utils::file::read);
+    compiler.compile(file, data);
+
+    auto assembly = compiler.output();
+
+    assembler.assemble(file, assembly);
+}
+
 } // namespace xsk::gsc::arc
 
 int parse_flags(int argc, char** argv, game& game, mode& mode, bool& zonetool)
@@ -609,7 +629,9 @@ std::uint32_t main(std::uint32_t argc, char** argv)
         }
         else if (game == game::T6)
         {
-            
+            // t6::compiler compiler(gsc::compilation_mode::release);
+            // t6::assembler assembler;
+            // arc::compile_file(assembler, compiler, file);
         }
     }
     else if (mode == mode::DECOMP)

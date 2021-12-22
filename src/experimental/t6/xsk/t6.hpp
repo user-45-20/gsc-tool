@@ -1,4 +1,4 @@
-// Copyright 2021 xensik. All rights reserved.
+// Copyright 2021 xensik, user4520. All rights reserved.
 //
 // Use of this source code is governed by a GNU GPLv3 license
 // that can be found in the LICENSE file.
@@ -10,9 +10,40 @@
 #include "disassembler.hpp"
 #include "decompiler.hpp"
 #include "resolver.hpp"
+#include "compiler.hpp"
+#include "assembler.hpp"
 
 namespace xsk::gsc::t6
 {
+
+#pragma pack(push, 1)
+struct GscHeader
+{
+  char magic[8];  // €GSC\r\n\0
+  std::uint32_t source_crc;
+  std::uint32_t include_offset;
+  std::uint32_t animtree_offset;
+  std::uint32_t cseg_offset;
+  std::uint32_t stringtablefixup_offset;
+  std::uint32_t exports_offset;
+  std::uint32_t imports_offset;
+  std::uint32_t fixup_offset;
+  std::uint32_t profile_offset;
+  std::uint32_t cseg_size;
+  std::uint16_t name;
+  std::uint16_t stringtablefixup_count;
+  std::uint16_t exports_count;
+  std::uint16_t imports_count;
+  std::uint16_t fixup_count;
+  std::uint16_t profile_count;
+  std::uint8_t include_count;
+  std::uint8_t animtree_count;
+  std::uint8_t flags;
+  char pad[1];
+};
+#pragma pack(pop)
+static_assert(sizeof(GscHeader) == 0x40);
+constexpr auto size = sizeof(GscHeader);
 
 enum class opcode : std::uint8_t
 {
@@ -29,9 +60,11 @@ enum class opcode : std::uint8_t
     OP_GetString = 0xA,
     OP_GetIString = 0xB,
     OP_GetVector = 0xC,
+    // used for field references
     OP_GetLevelObject = 0xD,
     OP_GetAnimObject = 0xE,
     OP_GetSelf = 0xF,
+    // used for notify, method calls
     OP_GetLevel = 0x10,
     OP_GetGame = 0x11,
     OP_GetAnim = 0x12,
@@ -137,6 +170,7 @@ enum class opcode : std::uint8_t
     OP_Abort = 0x76,
     OP_Object = 0x77,
     OP_ThreadObject = 0x78,
+    // these take a variable name instead of a stack index; they appear to be unused
     OP_EvalLocalVariable = 0x79,
     OP_EvalLocalVariableRef = 0x7A,
     OP_DevblockBegin = 0x7B,

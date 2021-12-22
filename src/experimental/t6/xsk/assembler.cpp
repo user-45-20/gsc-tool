@@ -4,9 +4,12 @@
 // that can be found in the LICENSE file.
 
 #include "stdafx.hpp"
-#include "iw5.hpp"
 
-namespace xsk::gsc::iw5
+#include "t6.hpp"
+
+// #if 0
+
+namespace xsk::gsc::t6
 {
 
 auto assembler::output_script() -> std::vector<std::uint8_t>
@@ -33,6 +36,7 @@ auto assembler::output_stack() -> std::vector<std::uint8_t>
     return stack;
 }
 
+/*
 void assembler::assemble(const std::string& file, std::vector<std::uint8_t>& data)
 {
     std::vector<std::string> assembly = utils::string::clean_buffer_lines(data);
@@ -92,7 +96,7 @@ void assembler::assemble(const std::string& file, std::vector<std::uint8_t>& dat
                 data.erase(data.begin());
                 inst->data = std::move(data);
 
-                if (opcode(inst->opcode) == opcode::OP_endswitch)
+                if (opcode(inst->opcode) == opcode::OP_EndSwitch)
                 {
                     switchnum = static_cast<std::uint16_t>(std::stoi(inst->data[0]));
                     inst->size += 7 * switchnum;
@@ -106,18 +110,19 @@ void assembler::assemble(const std::string& file, std::vector<std::uint8_t>& dat
 
     this->assemble(file, functions);
 }
+*/
+
+
 
 void assembler::assemble(const std::string& file, std::vector<gsc::function_ptr>& functions)
 {
-    script_ = std::make_unique<utils::byte_buffer>(0x100000);
-    stack_ = std::make_unique<utils::byte_buffer>(0x100000);
-    filename_ = file;
-    functions_ = std::move(functions);
+    m_bytecode = std::make_unique<utils::byte_buffer>(0x100000);
+    m_filename = file;
+    m_functions = std::move(functions);
 
-    script_->write<std::uint8_t>(static_cast<std::uint8_t>(opcode::OP_End));
-    // stack_->write<std::uint32_t>(0x62727568);
+    m_bytecode->write<std::uint8_t>(static_cast<std::uint8_t>(opcode::OP_End));
 
-    for (const auto& func : functions_)
+    for (const auto& func : m_functions)
     {
         this->assemble_function(func);
     }
@@ -125,17 +130,7 @@ void assembler::assemble(const std::string& file, std::vector<gsc::function_ptr>
 
 void assembler::assemble_function(const gsc::function_ptr& func)
 {
-    labels_ = func->labels;
-
-    stack_->write<std::uint32_t>(func->size);
-
-    func->id = func->name.substr(0, 3) == "_ID" ? std::stoi(func->name.substr(3)) : resolver::token_id(func->name);
-    stack_->write<std::uint16_t>(func->id);
-        
-    if (func->id == 0)
-    {
-        stack_->write_c_string(func->name);
-    }
+    m_labels = func->labels;
 
     for (const auto& inst : func->instructions)
     {
@@ -151,102 +146,85 @@ void assembler::assemble_instruction(const gsc::instruction_ptr& inst)
     case opcode::OP_Return:
     case opcode::OP_GetUndefined:
     case opcode::OP_GetZero:
-    case opcode::OP_waittillFrameEnd:
-    case opcode::OP_EvalLocalVariableCached0:
-    case opcode::OP_EvalLocalVariableCached1:
-    case opcode::OP_EvalLocalVariableCached2:
-    case opcode::OP_EvalLocalVariableCached3:
-    case opcode::OP_EvalLocalVariableCached4:
-    case opcode::OP_EvalLocalVariableCached5:
+    case opcode::OP_WaitTillFrameEnd:
     case opcode::OP_EvalArray:
     case opcode::OP_EvalArrayRef:
-    case opcode::OP_EvalLocalArrayRefCached0:
     case opcode::OP_ClearArray:
     case opcode::OP_EmptyArray:
-    case opcode::OP_AddArray:
     case opcode::OP_PreScriptCall:
     case opcode::OP_ScriptFunctionCallPointer:
     case opcode::OP_ScriptMethodCallPointer:
     case opcode::OP_GetLevelObject:
     case opcode::OP_GetAnimObject:
     case opcode::OP_GetSelf:
-    case opcode::OP_GetThisthread:
     case opcode::OP_GetLevel:
     case opcode::OP_GetGame:
     case opcode::OP_GetAnim:
     case opcode::OP_GetGameRef:
-    case opcode::OP_inc:
-    case opcode::OP_dec:
-    case opcode::OP_bit_or:
-    case opcode::OP_bit_ex_or:
-    case opcode::OP_bit_and:
-    case opcode::OP_equality:
-    case opcode::OP_inequality:
-    case opcode::OP_less:
-    case opcode::OP_greater:
-    case opcode::OP_less_equal:
-    case opcode::OP_waittillmatch2:
-    case opcode::OP_waittill:
-    case opcode::OP_notify:
-    case opcode::OP_endon:
-    case opcode::OP_voidCodepos:
-    case opcode::OP_vector:
-    case opcode::OP_greater_equal:
-    case opcode::OP_shift_left:
-    case opcode::OP_shift_right:
-    case opcode::OP_plus:
-    case opcode::OP_minus:
-    case opcode::OP_multiply:
-    case opcode::OP_divide:
-    case opcode::OP_mod:
-    case opcode::OP_size:
+    case opcode::OP_Inc:
+    case opcode::OP_Dec:
+    case opcode::OP_Bit_Or:
+    case opcode::OP_Bit_Xor:
+    case opcode::OP_Bit_And:
+    case opcode::OP_Equal:
+    case opcode::OP_NotEqual:
+    case opcode::OP_LessThan:
+    case opcode::OP_GreaterThan:
+    case opcode::OP_LessThanOrEqualTo:
+    case opcode::OP_WaitTill:
+    case opcode::OP_Notify:
+    case opcode::OP_EndOn:
+    case opcode::OP_VoidCodePos:
+    case opcode::OP_Vector:
+    case opcode::OP_GreaterThanOrEqualTo:
+    case opcode::OP_ShiftLeft:
+    case opcode::OP_ShiftRight:
+    case opcode::OP_Plus:
+    case opcode::OP_Minus:
+    case opcode::OP_Multiply:
+    case opcode::OP_Divide:
+    case opcode::OP_Modulus:
+    case opcode::OP_SizeOf:
     case opcode::OP_GetSelfObject:
-    case opcode::OP_SafeSetVariableFieldCached0:
-    case opcode::OP_clearparams:
-    case opcode::OP_checkclearparams:
-    case opcode::OP_EvalLocalVariableRefCached0:
-    case opcode::OP_EvalNewLocalVariableRefCached0:
+    case opcode::OP_ClearParams:
+    case opcode::OP_CheckClearParams:
     case opcode::OP_SetVariableField:
-    case opcode::OP_ClearVariableField:
-    case opcode::OP_SetLocalVariableFieldCached0:
-    case opcode::OP_ClearLocalVariableFieldCached0:
-    case opcode::OP_wait:
+    case opcode::OP_Wait:
     case opcode::OP_DecTop:
     case opcode::OP_CastFieldObject:
     case opcode::OP_CastBool:
     case opcode::OP_BoolNot:
     case opcode::OP_BoolComplement:
-        script_->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
+        m_bytecode->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
         break;
     case opcode::OP_GetByte:
     case opcode::OP_GetNegByte:
-        script_->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
-        script_->write<std::uint8_t>(static_cast<std::uint8_t>(std::stoi(inst->data[0])));
+        m_bytecode->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
+        m_bytecode->write<std::uint8_t>(static_cast<std::uint8_t>(std::stoi(inst->data[0])));
         break;
     case opcode::OP_GetUnsignedShort:
     case opcode::OP_GetNegUnsignedShort:
-        script_->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
-        script_->write<std::uint16_t>(static_cast<std::uint16_t>(std::stoi(inst->data[0])));
+        m_bytecode->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
+        m_bytecode->write<std::uint16_t>(static_cast<std::uint16_t>(std::stoi(inst->data[0])));
         break;
     case opcode::OP_GetInteger:
-        script_->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
-        script_->write<std::int32_t>(std::stoi(inst->data[0]));
+        m_bytecode->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
+        m_bytecode->write<std::int32_t>(std::stoi(inst->data[0]));
         break;
     case opcode::OP_GetFloat:
-        script_->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
-        script_->write<float>(std::stof(inst->data[0]));
+        m_bytecode->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
+        m_bytecode->write<float>(std::stof(inst->data[0]));
         break;
     case opcode::OP_GetVector:
-        script_->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
-        script_->write<float>(std::stof(inst->data[0]));
-        script_->write<float>(std::stof(inst->data[1]));
-        script_->write<float>(std::stof(inst->data[2]));
+        m_bytecode->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
+        m_bytecode->write<float>(std::stof(inst->data[0]));
+        m_bytecode->write<float>(std::stof(inst->data[1]));
+        m_bytecode->write<float>(std::stof(inst->data[2]));
         break;
     case opcode::OP_GetString:
     case opcode::OP_GetIString:
-        script_->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
-        script_->write<std::uint16_t>(0);
-        stack_->write_c_string(utils::string::to_code(inst->data[0]));
+        m_bytecode->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
+        m_bytecode>write_c_string(utils::string::to_code(inst->data[0]));
         break;
     case opcode::OP_GetAnimation:
         script_->write<std::uint8_t>(static_cast<std::uint8_t>(inst->opcode));
@@ -595,4 +573,6 @@ auto assembler::resolve_label(const std::string& name) -> std::uint32_t
     throw asm_error("Couldn't resolve label address of '" + name + "'!");
 }
 
-}  // namespace xsk::gsc::iw5
+}  // namespace xsk::gsc::t6
+
+#endif

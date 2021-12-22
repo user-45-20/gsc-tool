@@ -42,7 +42,9 @@ struct local_var
 
 struct context
 {
+    // decompiler only
     std::string loc_end;
+
     std::string loc_break;
     std::string loc_continue;
     std::vector<local_var> local_vars;
@@ -143,7 +145,19 @@ struct context
                 else if(pos > i)
                 {
                     auto& v = child->local_vars;
+                    std::cout << "before ";
+                    for (auto& var : v)
+                    {
+                        std::cout << var.name << " ";
+                    }
+                    std::cout << "\n";
                     std::rotate(v.rend() - pos - 1, v.rend() - pos, v.rend() - i);
+                    std::cout << "after ";
+                    for (auto& var : v)
+                    {
+                        std::cout << var.name << " ";
+                    }
+                    std::cout << "\n";
                 }
             }
         }
@@ -212,6 +226,12 @@ struct context
         {
             this->local_vars.push_back(child->local_vars.at(i));
         }
+    }
+
+    void transfer_t6(const context_ptr& child)
+    {
+        child->loc_break = this->loc_break;
+        child->loc_continue = this->loc_continue;
     }
 };
 
